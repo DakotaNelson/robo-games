@@ -1,4 +1,6 @@
 <launch>
+  <arg name="namespace" default="/" />
+  <group ns="$(arg namespace)">
   <node name="ar_pose" pkg="ar_pose" type="ar_multi" respawn="false"
     output="screen">
     <param name="marker_pattern_list" type="string"
@@ -6,4 +8,5 @@
     <param name="threshold" type="int" value="50"/>
     <param name="publish_tf" type="bool" value="false"/>
   </node>
+  </group>
 </launch>

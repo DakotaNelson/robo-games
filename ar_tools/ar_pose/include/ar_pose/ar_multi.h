@@ -63,8 +63,8 @@
 #include <ar_pose/ARMarker.h>
 #include <ar_pose/object.h>
 
-const std::string cameraImageTopic_ = "/camera/image_raw";
-const std::string cameraInfoTopic_  = "/camera/camera_info";
+const std::string cameraImageTopic_ = "camera/image_raw";
+const std::string cameraInfoTopic_  = "camera/camera_info";
 
 const double AR_TO_ROS = 0.001;
 

@@ -46,6 +46,9 @@ from tf.broadcaster import TransformBroadcaster
 
 from neato_driver.neato_driver import xv11, BASE_WIDTH, MAX_SPEED
 
+ROBOT_NAME = rospy.get_namespace()[1:-1]
+ROBOT_NAME = '/' + ROBOT_NAME + '_'
+
 class NeatoNode:
 
     def __init__(self):
@@ -81,7 +84,7 @@ class NeatoNode:
         # NEED to reorder the laser scans and flip the laser around... this will not be intuitive for students!!
 
         # things that don't ever change
-        scan_link = rospy.get_param('~frame_id','base_laser_link')
+        scan_link = rospy.get_param('~frame_id',ROBOT_NAME+'base_laser_link')
         scan = LaserScan(header=rospy.Header(frame_id=scan_link)) 
         scan.angle_min = -pi
         scan.angle_max = pi
@@ -90,7 +93,7 @@ class NeatoNode:
         scan.range_max = 5.0
         scan.time_increment = 1.0/(5*360)
         scan.scan_time = 0.2
-        odom = Odometry(header=rospy.Header(frame_id="odom"), child_frame_id='base_link')
+        odom = Odometry(header=rospy.Header(frame_id=ROBOT_NAME+"odom"), child_frame_id=ROBOT_NAME+'base_link')
     
         # main loop of driver
         r = rospy.Rate(5)
@@ -162,7 +165,7 @@ class NeatoNode:
                 odom.pose.pose.orientation = quaternion
                 odom.twist.twist.linear.x = dx/dt
                 odom.twist.twist.angular.z = dth/dt
-                self.odomBroadcaster.sendTransform( (self.x, self.y, 0), (quaternion.x, quaternion.y, quaternion.z, quaternion.w), curr_motor_time, "base_link", "odom" )
+                self.odomBroadcaster.sendTransform( (self.x, self.y, 0), (quaternion.x, quaternion.y, quaternion.z, quaternion.w), curr_motor_time, ROBOT_NAME+"base_link", ROBOT_NAME+"odom" )
                 self.odomPub.publish(odom)
                 #print 'Got motors %f' % (time.time() - t_start)
             except Exception as err:

@@ -16,6 +16,9 @@ from tf import TransformListener, TransformBroadcaster
 from copy import deepcopy
 from math import sin, cos, pi, atan2, fabs
 
+ROBOT_NAME = rospy.get_namespace()[1:-1]
+ROBOT_NAME = '/' + ROBOT_NAME
+
 class TransformHelpers:
     """ Some convenience functions for translating between various representions of a robot pose.
         TODO: nothing... you should not have to modify these """
@@ -97,11 +100,12 @@ class MarkerLocator(object):
 
 class MarkerProcessor(object):
     def __init__(self, use_dummy_transform=False):
+        print 'init'
         rospy.init_node('star_center_positioning_node')
         if use_dummy_transform:
-            self.odom_frame_name = "odom_dummy"
+            self.odom_frame_name = ROBOT_NAME+"_odom_dummy"
         else:
-            self.odom_frame_name = "odom"
+            self.odom_frame_name = ROBOT_NAME+"_odom"
 
         self.marker_locators = {}
         self.add_marker_locator(MarkerLocator(0,(0.0,0.0),-pi/2))
@@ -110,9 +114,9 @@ class MarkerProcessor(object):
         self.marker_sub = rospy.Subscriber("ar_pose_marker",
                                            ARMarkers,
                                            self.process_markers)
-        self.odom_sub = rospy.Subscriber("odom", Odometry, self.process_odom, queue_size=10)
-        self.star_pose_pub = rospy.Publisher("STAR_pose",PoseStamped,queue_size=10)
-        self.continuous_pose = rospy.Publisher("STAR_pose_continuous",PoseStamped,queue_size=10)
+        self.odom_sub = rospy.Subscriber(ROBOT_NAME+"/odom", Odometry, self.process_odom, queue_size=10)
+        self.star_pose_pub = rospy.Publisher(ROBOT_NAME+"/STAR_pose",PoseStamped,queue_size=10)
+        self.continuous_pose = rospy.Publisher(ROBOT_NAME+"/STAR_pose_continuous",PoseStamped,queue_size=10)
         self.tf_listener = TransformListener()
         self.tf_broadcaster = TransformBroadcaster()
 
@@ -130,6 +134,7 @@ class MarkerProcessor(object):
             print "error is", inst
 
     def process_markers(self, msg):
+        print 'process markers'
         for marker in msg.markers:
             # do some filtering basd on prior knowledge
             # we know the approximate z coordinate and that all angles but yaw should be close to zero
@@ -150,7 +155,7 @@ class MarkerProcessor(object):
                 # TODO: use markers timestamp instead of now() (unfortunately, not populated currently by ar_pose)
                 pose_stamped = PoseStamped(header=Header(stamp=rospy.Time.now(),frame_id="STAR"),pose=pose)
                 try:
-                    offset, quaternion = self.tf_listener.lookupTransform("/base_link", "/base_laser_link", rospy.Time(0))
+                    offset, quaternion = self.tf_listener.lookupTransform(ROBOT_NAME+"_base_link", ROBOT_NAME+"_base_laser_link", rospy.Time(0))
                 except Exception as inst:
                     print "Error", inst
                     return
@@ -164,20 +169,22 @@ class MarkerProcessor(object):
     def fix_STAR_to_odom_transform(self, msg):
         """ Super tricky code to properly update map to odom transform... do not modify this... Difficulty level infinity. """
         (translation, rotation) = TransformHelpers.convert_pose_inverse_transform(msg.pose)
-        p = PoseStamped(pose=TransformHelpers.convert_translation_rotation_to_pose(translation,rotation),header=Header(stamp=rospy.Time(),frame_id="base_link"))
+        p = PoseStamped(pose=TransformHelpers.convert_translation_rotation_to_pose(translation,rotation),header=Header(stamp=rospy.Time(),frame_id=ROBOT_NAME+"_base_link"))
+        print 'trying'
         try:
-            self.tf_listener.waitForTransform("odom","base_link",rospy.Time(),rospy.Duration(1.0))
+            self.tf_listener.waitForTransform(ROBOT_NAME+"_odom",ROBOT_NAME+"_base_link",rospy.Time(),rospy.Duration(1.0))
         except Exception as inst:
             print "whoops", inst
             return
         print "got transform"
-        self.odom_to_STAR = self.tf_listener.transformPose("odom", p)
+        self.odom_to_STAR = self.tf_listener.transformPose(ROBOT_NAME+"_odom", p)
         (self.translation, self.rotation) = TransformHelpers.convert_pose_inverse_transform(self.odom_to_STAR.pose)
 
     def broadcast_last_transform(self):
         """ Make sure that we are always broadcasting the last map to odom transformation.
             This is necessary so things like move_base can work properly. """
         if not(hasattr(self,'translation') and hasattr(self,'rotation')):
+            print ':('
             return
         self.tf_broadcaster.sendTransform(self.translation, self.rotation, rospy.get_rostime(), self.odom_frame_name, "STAR")
 

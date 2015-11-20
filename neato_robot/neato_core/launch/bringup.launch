@@ -10,6 +10,7 @@
 
   <include file="$(find neato_core)/launch/bringup_minimal.launch">
 	<arg name="host" value="$(arg host)"/>
+  <arg name="namespace" value="$(arg namespace)"/>
   </include>
   <include file="$(find gscam)/examples/raspi_nodelet_udp.launch">
 	 <arg name="host" value="$(arg host)"/>
