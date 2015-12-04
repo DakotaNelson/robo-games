@@ -8,5 +8,7 @@
     <param name="threshold" type="int" value="50"/>
     <param name="publish_tf" type="bool" value="false"/>
   </node>
+  <node name="ar_location" pkg="ar_locating" type="star_center_position.py" respawn="false" output="screen">
+  </node>
   </group>
 </launch>
