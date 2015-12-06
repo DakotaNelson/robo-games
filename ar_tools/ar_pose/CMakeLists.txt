@@ -13,6 +13,7 @@ find_package(catkin REQUIRED COMPONENTS
 	image_transport
 	cv_bridge
 	message_generation
+	dynamic_reconfigure
 )
 
 
@@ -26,6 +27,9 @@ add_message_files(
 generate_messages(DEPENDENCIES
 	geometry_msgs
 )
+generate_dynamic_reconfigure_options(
+   cfg/ARPose.cfg
+ )
 
 catkin_package(
   INCLUDE_DIRS include

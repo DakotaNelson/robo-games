@@ -76,6 +76,8 @@ namespace ar_pose
     ARMultiPublisher (ros::NodeHandle & n);
     ~ARMultiPublisher (void);
 
+    void setThreshold(int newThreshold);
+
   private:
     void arInit ();
     void getTransformationCallback (const sensor_msgs::ImageConstPtr &);

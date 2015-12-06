@@ -25,12 +25,31 @@
 #include "ar_pose/ar_multi.h"
 #include "ar_pose/object.h"
 
+#include <dynamic_reconfigure/server.h>
+#include <ar_pose/ARPoseConfig.h>
+
+ar_pose::ARMultiPublisher* ar_multi = 0;
+
+void callback(ar_pose::ARPoseConfig &config, uint32_t level) {
+  ar_multi->setThreshold(config.threshold);
+  ROS_INFO("Reconfigure Request: %d", config.threshold);
+}
+
 int main (int argc, char **argv)
 {
   ros::init (argc, argv, "ar_multi");
   ros::NodeHandle n;
-  ar_pose::ARMultiPublisher ar_multi (n);
+
+  ar_multi = new ar_pose::ARMultiPublisher(n);
+
+  dynamic_reconfigure::Server<ar_pose::ARPoseConfig> server;
+  dynamic_reconfigure::Server<ar_pose::ARPoseConfig>::CallbackType f;
+
+  f = boost::bind(&callback, _1, _2);
+  server.setCallback(f);
+
   ros::spin ();
+  delete ar_multi;
   return 0;
 }
 
@@ -40,7 +59,7 @@ namespace ar_pose
   {
     std::string local_path;
     std::string package_path = ros::package::getPath (ROS_PACKAGE_NAME);
-    std::string default_path = "data/object_4x4";
+	  std::string default_path = "data/object_4x4";
     ros::NodeHandle n_param ("~");
     XmlRpc::XmlRpcValue xml_marker_center;
 
@@ -57,19 +76,19 @@ namespace ar_pose
     if (!n_param.getParam ("threshold", threshold_))
       threshold_ = 100;
     ROS_INFO ("\tThreshold: %d", threshold_);
-  
-  //modifications to allow path list from outside the package
-  n_param.param ("marker_pattern_list", local_path, default_path);
-  if (local_path.compare(0,5,"data/") == 0){
-    //according to previous implementations, check if first 5 chars equal "data/"
-    sprintf (pattern_filename_, "%s/%s", package_path.c_str (), local_path.c_str ());
-  }
-  else{
-    //for new implementations, can pass a path outside the package_path
-    sprintf (pattern_filename_, "%s", local_path.c_str ());
-  }
-  ROS_INFO ("Marker Pattern Filename: %s", pattern_filename_);
-  
+	
+	//modifications to allow path list from outside the package
+	n_param.param ("marker_pattern_list", local_path, default_path);
+	if (local_path.compare(0,5,"data/") == 0){
+	  //according to previous implementations, check if first 5 chars equal "data/"
+	  sprintf (pattern_filename_, "%s/%s", package_path.c_str (), local_path.c_str ());
+	}
+	else{
+	  //for new implementations, can pass a path outside the package_path
+	  sprintf (pattern_filename_, "%s", local_path.c_str ());
+	}
+	ROS_INFO ("Marker Pattern Filename: %s", pattern_filename_);
+	
     // **** subscribe
 
     ROS_INFO ("Subscribing to info topic");
@@ -91,6 +110,11 @@ namespace ar_pose
     //cvReleaseImage(&capture_); //Don't know why but crash when release the image
     arVideoCapStop ();
     arVideoClose ();
+  }
+
+  void ARMultiPublisher::setThreshold(int newThreshold)
+  {
+    threshold_ = newThreshold;
   }
 
   void ARMultiPublisher::camInfoCallback (const sensor_msgs::CameraInfoConstPtr & cam_info)

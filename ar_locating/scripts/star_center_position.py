@@ -17,7 +17,7 @@ from copy import deepcopy
 from math import sin, cos, pi, atan2, fabs
 
 ROBOT_NAME = rospy.get_namespace()[1:-1]
-ROBOT_NAME = '/' + ROBOT_NAME
+ROBOT_NAME = '/' + ROBOT_NAME[0:-3] #get name of robot from namespace (assumes for <robot_name>_ar for namespace of upwards facing camera)
 
 class TransformHelpers:
     """ Some convenience functions for translating between various representions of a robot pose.
@@ -103,18 +103,23 @@ class MarkerProcessor(object):
         print 'init'
         rospy.init_node('star_center_positioning_node')
         if use_dummy_transform:
-            self.odom_frame_name = ROBOT_NAME+"_odom_dummy"
+            self.odom_frame_name = ROBOT_NAME+"_odom_dummy" #identify this odom as ROBOT_NAME's
         else:
-            self.odom_frame_name = ROBOT_NAME+"_odom"
+            self.odom_frame_name = ROBOT_NAME+"_odom" #identify this odom as ROBOT_NAME's
 
         self.marker_locators = {}
-        self.add_marker_locator(MarkerLocator(0,(0.0,0.0),-pi/2))
-        self.add_marker_locator(MarkerLocator(1,(1.4/1.1,2.0/1.1),0))
+
+        self.add_marker_locator(MarkerLocator(0,(-6*12*2.54/100.0,0),0))
+        self.add_marker_locator(MarkerLocator(1,(0.0,0.0),pi))
+        self.add_marker_locator(MarkerLocator(2,(0.0,10*12*2.54/100.0),0))
+        self.add_marker_locator(MarkerLocator(3,(-6*12*2.54/100.0,6*12*2.54/100.0),0))
+
+        self.pose_correction = rospy.get_param('~pose_correction',0.0)
 
         self.marker_sub = rospy.Subscriber("ar_pose_marker",
                                            ARMarkers,
                                            self.process_markers)
-        self.odom_sub = rospy.Subscriber(ROBOT_NAME+"/odom", Odometry, self.process_odom, queue_size=10)
+        self.odom_sub = rospy.Subscriber(ROBOT_NAME+"/odom", Odometry, self.process_odom, queue_size=10) #publish and subscribe to the correct robot's topics
         self.star_pose_pub = rospy.Publisher(ROBOT_NAME+"/STAR_pose",PoseStamped,queue_size=10)
         self.continuous_pose = rospy.Publisher(ROBOT_NAME+"/STAR_pose_continuous",PoseStamped,queue_size=10)
         self.tf_listener = TransformListener()
@@ -143,19 +148,25 @@ class MarkerProcessor(object):
                                                   marker.pose.pose.orientation.z,
                                                   marker.pose.pose.orientation.w))
             angle_diffs = TransformHelpers.angle_diff(euler_angles[0],pi), TransformHelpers.angle_diff(euler_angles[1],0)
+            print angle_diffs, marker.pose.pose.position.z
             if (marker.id in self.marker_locators and
-                0.5 <= marker.pose.pose.position.z <= 4 and
-                fabs(angle_diffs[0]) <= .6 and
-                fabs(angle_diffs[1]) <= .6):
+
+                3.2 <= marker.pose.pose.position.z <= 3.6 and
+                fabs(angle_diffs[0]) <= .4 and
+                fabs(angle_diffs[1]) <= .4):
+                print "FOUND IT!"
+
                 locator = self.marker_locators[marker.id]
-                xy_yaw = locator.get_camera_position(marker)
+                xy_yaw = list(locator.get_camera_position(marker))
+                xy_yaw[0] += self.pose_correction*cos(xy_yaw[2])
+                xy_yaw[1] += self.pose_correction*sin(xy_yaw[2])
                 orientation_tuple = quaternion_from_euler(0,0,xy_yaw[2])
-                pose = Pose(position=Point(x=xy_yaw[0],y=xy_yaw[1],z=0),
+                pose = Pose(position=Point(x=-xy_yaw[0],y=-xy_yaw[1],z=0),
                             orientation=Quaternion(x=orientation_tuple[0], y=orientation_tuple[1], z=orientation_tuple[2], w=orientation_tuple[3]))
                 # TODO: use markers timestamp instead of now() (unfortunately, not populated currently by ar_pose)
                 pose_stamped = PoseStamped(header=Header(stamp=rospy.Time.now(),frame_id="STAR"),pose=pose)
                 try:
-                    offset, quaternion = self.tf_listener.lookupTransform(ROBOT_NAME+"_base_link", ROBOT_NAME+"_base_laser_link", rospy.Time(0))
+                    offset, quaternion = self.tf_listener.lookupTransform(ROBOT_NAME+"_base_link", ROBOT_NAME+"_base_laser_link", rospy.Time(0)) #listen to TF frames for this robot
                 except Exception as inst:
                     print "Error", inst
                     return
@@ -172,21 +183,20 @@ class MarkerProcessor(object):
         p = PoseStamped(pose=TransformHelpers.convert_translation_rotation_to_pose(translation,rotation),header=Header(stamp=rospy.Time(),frame_id=ROBOT_NAME+"_base_link"))
         print 'trying'
         try:
-            self.tf_listener.waitForTransform(ROBOT_NAME+"_odom",ROBOT_NAME+"_base_link",rospy.Time(),rospy.Duration(1.0))
+            self.tf_listener.waitForTransform(ROBOT_NAME+"_odom",ROBOT_NAME+"_base_link",rospy.Time(),rospy.Duration(1.0)) #listen to TF frames for this robot
         except Exception as inst:
             print "whoops", inst
             return
         print "got transform"
         self.odom_to_STAR = self.tf_listener.transformPose(ROBOT_NAME+"_odom", p)
-        (self.translation, self.rotation) = TransformHelpers.convert_pose_inverse_transform(self.odom_to_STAR.pose)
+        (self.translation, self.rotation) = TransformHelpers.convert_pose_inverse_transform(self.odom_to_STAR.pose) #listen to TF frames for this robot
 
     def broadcast_last_transform(self):
         """ Make sure that we are always broadcasting the last map to odom transformation.
             This is necessary so things like move_base can work properly. """
         if not(hasattr(self,'translation') and hasattr(self,'rotation')):
-            print ':('
             return
-        self.tf_broadcaster.sendTransform(self.translation, self.rotation, rospy.get_rostime(), self.odom_frame_name, "STAR")
+        self.tf_broadcaster.sendTransform(self.translation, self.rotation, rospy.get_rostime(), self.odom_frame_name, "STAR") #send position relative to base frame "STAR"
 
     def run(self):
         r = rospy.Rate(10)
