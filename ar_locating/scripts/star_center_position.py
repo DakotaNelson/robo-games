@@ -160,6 +160,7 @@ class MarkerProcessor(object):
                 xy_yaw = list(locator.get_camera_position(marker))
                 xy_yaw[0] += self.pose_correction*cos(xy_yaw[2])
                 xy_yaw[1] += self.pose_correction*sin(xy_yaw[2])
+                xy_yaw[2] += pi
                 orientation_tuple = quaternion_from_euler(0,0,xy_yaw[2])
                 pose = Pose(position=Point(x=-xy_yaw[0],y=-xy_yaw[1],z=0),
                             orientation=Quaternion(x=orientation_tuple[0], y=orientation_tuple[1], z=orientation_tuple[2], w=orientation_tuple[3]))
