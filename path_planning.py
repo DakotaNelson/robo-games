@@ -21,7 +21,7 @@ class Neato(object):
 		rospy.init_node('path_planning')
         self.pub = rospy.Publisher('cmd_vel', Twist, queue_size=10)
         # rospy.Subscriber(, , self.update_puck)
-        rospy.Subscriber('STAR_pose_continuous', PoseStamped, self.update_position) 
+        rospy.Subscriber('STAR_pose_continuous', PoseStamped, self.update_position)
 
 		self.pos_x = 0
 		self.pos_y = 0
