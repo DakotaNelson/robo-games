@@ -1,0 +1,3 @@
+#!/bin/bash
+cd ../../.. # Change to workspace directory
+git clone https://github.com/ar-tools/ar_data.git
