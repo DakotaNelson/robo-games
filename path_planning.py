@@ -1,6 +1,7 @@
 """Script to plan a path for a Neato depending on the current game state. Needs
 to run inside a robot specific namespace for STAR_pose_continuous to work"""
 
+import sys
 import rospy
 import cv2
 import numpy as np
@@ -28,9 +29,10 @@ class Neato(object):
 		self.angle = 0
 		self.forward_speed = 0
 		self.angular_speed = 0
-		self.has_puck = False
-		self.puck_distance = None
-		self.puck_offset = None
+		self.has_puck = True
+		self.puck_distance = 0
+		self.puck_offset = 0
+		self.distance_cutoff = 0.05
 		self.offset_cutoff = 0.05
 		self.target_angle_cutoff = 1
 		self.state = 0
@@ -44,20 +46,18 @@ class Neato(object):
 		x, y, theta = convert_pose_to_xy_and_theta(msg.pose)
 		self.pos_x = x
 		self.pos_y = y
-		self.angle = theta
+		self.angle = theta*180 / math.pi
 		if self.has_puck:
 			# compute angle to target (geometry needs to be double checked)
 			target_radians = math.atan2(self.target_y - self.pos_y, self.target_x - self.pos_x)
-			if target_radians < 0:
-				target_radians += math.pi
-			self.target_angle = target_radians*360 / math.pi
-	def acquire_puck(self):
-		self.has_puck = True
-	def lose_puck(self):
-		self.has_puck = False
+			self.target_angle = target_radians*180 / math.pi
 	def update_puck(self, msg):
 		self.puck_distance = msg.puck_distance
 		self.puck_offset = msg.puck_offset
+		if self.puck_distance < self.distance_cutoff:
+			self.has_puck = True
+		elif self.puck_distance > 2*self.distance_cutoff:
+			self.has_puck = False
 	def initialize_target(self, x, y):
 		self.target_x = x
 		self.target_y = y		
@@ -113,5 +113,8 @@ class Neato(object):
             pub.publish(twist)
 
 if __name__ == '__main__':
+	target_x = rospy.get_param('~target_x', 0)
+	target_y = rospy.get_param('~target_y', 0)
+
 	neato = Neato()
-	neato.run()
+	neato.run(
