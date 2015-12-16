@@ -90,7 +90,11 @@ class Neato(object):
                     self.forward_speed = 0
                     self.angular_speed = offset_speed
             else:
-                if abs(self.target_angle - self.angle) < self.target_angle_cutoff:
+                if abs(self.pos_x - self.target_x) < 0.1 and abs(self.pos_y - self.target_y) < 0.1:
+                    self.forward_speed = 0
+                    self.angular_speed = 0
+                    break
+                elif abs(self.target_angle - self.angle) < self.target_angle_cutoff:
                     # moving towards the target
                     self.state = 4
                     self.angular_speed = 0
@@ -99,10 +103,11 @@ class Neato(object):
                     # orienting towards the target with the puck
                     self.state = 3
                     # need to adjust this with some gain depending on scale (or for sign)
-                    offset_speed = (self.target_angle - self.angle) / 200
+                    angle_err = ((self.target_angle - self.angle)+180)%360 - 180
+                    offset_speed = (angle_err) / 50
                     if offset_speed > 1:
                         offset_speed = 1
-                    self.forward_speed = 0
+                    self.forward_speed = 1-abs(offset_speed)
                     self.angular_speed = offset_speed
 
             # actuate the Neato
@@ -117,10 +122,22 @@ class Neato(object):
             print self.pos_y
             print '\n'
 
+        twist = Twist()
+        twist.linear.x = self.forward_speed
+        twist.angular.z = self.angular_speed
+        self.pub.publish(twist)
+        print self.state
+        print self.target_angle
+        print self.angle
+        print self.pos_x
+        print self.pos_y
+        print '\n'
+        print 'done'
+
 if __name__ == '__main__':
     #target_x = rospy.get_param('~target_x', 0)
     #target_y = rospy.get_param('~target_y', 0)
 
     neato = Neato()
-    neato.initialize_target(0,0)
+    neato.initialize_target(1,-2)
     neato.run()
