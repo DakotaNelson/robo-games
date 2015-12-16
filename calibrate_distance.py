@@ -2,11 +2,14 @@ import math
 import numpy as np
 from matplotlib import pyplot as plt
 
-with open('5m-distances-away.txt', 'r') as f:
+with open('red_puck_away_sizes.txt', 'r') as f:
     distances = f.read().split('\n')[:-1]
     # last one is always empty, so leave it off
 
 blob_size = [float(x) for x in (distances)]
+
+end = 60
+blob_size = blob_size[:-end]
 
 logblob = []
 for e in blob_size:
@@ -43,5 +46,6 @@ y = base
 print(fit)
 
 plt.plot(x, y, logblob, dist)
-plt.ylim([0, 1000])
+plt.ylim([0, 200])
+plt.xlim([0,0.3])
 plt.show()
