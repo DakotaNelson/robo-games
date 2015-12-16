@@ -1,23 +1,30 @@
+import math
 import numpy as np
 from matplotlib import pyplot as plt
 
-with open('distances.txt', 'r') as f:
+with open('5m-distances-away.txt', 'r') as f:
     distances = f.read().split('\n')[:-1]
     # last one is always empty, so leave it off
 
-distances = [float(x) for x in distances]
+blob_size = [float(x) for x in (distances)]
 
-actual = np.linspace(30, 5, len(distances))
+logblob = []
+for e in blob_size:
+    if e > 2:
+        logblob.append(1/math.sqrt(e))
+#logblob = [math.log(d) for d in blob_size]
 
-start = 350
-distances = distances[:-start]
-actual = actual[:-start]
+dist = np.linspace(0, 192, len(logblob))
 
-deg = 4
+# minblob = min(logblob) - 1
+#
+# logblob = [d - minblob for d in logblob]
 
-fit = np.polyfit(actual, distances, deg)
+deg = 1
 
-x = np.linspace(50, 0, len(distances))
+fit = np.polyfit(logblob, dist, deg)
+
+x = np.linspace(0, 200, len(logblob))
 y = []
 
 for i, term in enumerate(fit):
@@ -29,7 +36,12 @@ for arr in y:
 
 y = base
 
+#y = [d + (minblob-1) for d in y]
+
+#y = np.exp(y)
+
 print(fit)
 
-plt.plot(x,y, actual, distances)
+plt.plot(x, y, logblob, dist)
+plt.ylim([0, 1000])
 plt.show()
