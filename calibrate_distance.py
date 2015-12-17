@@ -2,12 +2,12 @@ import math
 import numpy as np
 from matplotlib import pyplot as plt
 
-with open('red_puck_away_sizes.txt', 'r') as f:
+with open('distances.txt', 'r') as f:
     distances = f.read().split('\n')[:-1]
     # last one is always empty, so leave it off
 
 blob_size = [float(x) for x in (distances)]
-
+print(len(blob_size))
 end = 60
 blob_size = blob_size[:-end]
 

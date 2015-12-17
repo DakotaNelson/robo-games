@@ -13,7 +13,7 @@ class ColorTracker:
         rospy.init_node('puck_tracker')
 
         self.img_sub = rospy.Subscriber(cameraTopic, Image, self.process_frame, queue_size=1)
-        self.puck_pub = rospy.Publisher("/puck_camera_position", PuckPosition, queue_size=1)
+        self.puck_pub = rospy.Publisher("puck_camera_position", PuckPosition, queue_size=1)
         #self.capture = cv.VideoCapture('red_puck.mp4')
         self.bridge = CvBridge()
 
@@ -28,13 +28,13 @@ class ColorTracker:
 
         # consider blurring image a bit
 
-        hsv = cv.cvtColor(frame, cv.COLOR_BGR2HSV)
-        thresh = cv.inRange(hsv, np.array((0, 120, 90)), np.array((40, 270, 200)))
+        #hsv = cv.cvtColor(frame, cv.COLOR_BGR2HSV)
+        thresh = cv.inRange(frame, np.array((0, 0, 100)), np.array((100, 100, 255)))
 
         # erosion and dilation to remove small particles/noise
         kernel = np.ones((5,5), np.uint8)
-        thresh = cv.erode(thresh, kernel, iterations=2)
-        thresh = cv.dilate(thresh, kernel, iterations=2)
+        thresh = cv.erode(thresh, kernel, iterations=3)
+        thresh = cv.dilate(thresh, kernel, iterations=3)
 
         thresh2 = thresh.copy()
 
@@ -63,7 +63,7 @@ class ColorTracker:
             self.puck_pub.publish(msg)
             returnNow = True
 
-        cv.imshow('frame', hsv)
+        cv.imshow('frame', frame)
 
         if returnNow:
             cv.waitKey(25)
@@ -83,7 +83,7 @@ class ColorTracker:
         offset = float(cx) / width
 
         def distance_fit(y):
-            params = [2419.17668297, 31.91655963]
+            params = [4.18084598e+03, -1.20346945e+00]
             c = params[0] * (1/sqrt(y))
             d = params[1]
             return c+d
@@ -107,5 +107,5 @@ class ColorTracker:
         rospy.spin()
 
 if __name__ == "__main__":
-    ct = ColorTracker('/camera/image_raw')
+    ct = ColorTracker('camera/image_raw')
     ct.run()

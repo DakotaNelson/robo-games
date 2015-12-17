@@ -8,6 +8,7 @@ import numpy as np
 import math
 from geometry_msgs.msg import Twist, PoseStamped
 from tf.transformations import euler_from_quaternion
+from robo_games.msg import PuckCameraLocation as PuckPosition
 # need import for blob detection
 
 class Neato(object):
@@ -21,18 +22,19 @@ class Neato(object):
         """
         rospy.init_node('path_planning')
         self.pub = rospy.Publisher('cmd_vel', Twist, queue_size=10)
-        # rospy.Subscriber(, , self.update_puck)
+        rospy.Subscriber('puck_camera_position', PuckPosition, self.update_puck)
         rospy.Subscriber('STAR_pose_continuous', PoseStamped, self.update_position)
         self.pos_x = 0
         self.pos_y = 0
         self.angle = 0
         self.forward_speed = 0
         self.angular_speed = 0
-        self.has_puck = True
-        self.puck_distance = 1
+        self.can_see_puck = False
+        self.has_puck = False
+        self.puck_distance = 200 # inches
         self.puck_offset = 0
-        self.distance_cutoff = 0.05
-        self.offset_cutoff = 0.05
+        self.puck_distance_cutoff = 10 # inches
+        self.puck_offset_cutoff = 0.1
         self.target_angle = 0
         self.target_angle_cutoff = 2
         self.state = 0
@@ -52,12 +54,15 @@ class Neato(object):
             target_radians = math.atan2(self.target_y - self.pos_y, self.target_x - self.pos_x)
             self.target_angle = target_radians*180 / math.pi
     def update_puck(self, msg):
-        self.puck_distance = msg.puck_distance
-        self.puck_offset = msg.puck_offset
-        if self.puck_distance < self.distance_cutoff:
-            self.has_puck = True
-        elif self.puck_distance > 2*self.distance_cutoff:
+        if msg.puck_distance == -1:
+            self.can_see_puck = False
             self.has_puck = False
+        else:
+            self.can_see_puck = True
+            self.puck_distance = msg.puck_distance
+            self.puck_offset = msg.puck_offset - 0.5
+            if self.puck_distance < self.puck_distance_cutoff:
+                self.has_puck = True
     def initialize_target(self, x, y):
         self.target_x = x
         self.target_y = y       
@@ -68,14 +73,14 @@ class Neato(object):
             # start out not issuing any motor commands
             r.sleep()
             # first call our subscribers and update parameters
-            if not (self.puck_distance or self.puck_offset):
+            if not self.can_see_puck:
                 # searching for the puck
                 self.state = 0
                 # turn around slowly to try to locate the puck
                 self.forward_speed = 0
                 self.angular_speed = 0.25
             elif not self.has_puck:
-                if abs(self.puck_offset) < self.offset_cutoff:
+                if abs(self.puck_offset) < self.puck_offset_cutoff:
                     # getting towards the puck
                     self.state = 2
                     self.angular_speed = 0
@@ -84,10 +89,10 @@ class Neato(object):
                     # orienting towards the puck
                     self.state = 1
                     # need to adjust this with some gain depending on scale (or for sign)
-                    offset_speed = self.puck_offset
+                    offset_speed = -self.puck_offset
                     if offset_speed > 1:
                         offset_speed = 1
-                    self.forward_speed = 0
+                    self.forward_speed = 1 - 2*abs(offset_speed)
                     self.angular_speed = offset_speed
             else:
                 if abs(self.pos_x - self.target_x) < 0.1 and abs(self.pos_y - self.target_y) < 0.1:
@@ -107,6 +112,8 @@ class Neato(object):
                     offset_speed = (angle_err) / 50
                     if offset_speed > 1:
                         offset_speed = 1
+                    elif offset_speed < -1:
+                        offset_speed = -1
                     self.forward_speed = 1-abs(offset_speed)
                     self.angular_speed = offset_speed
 
@@ -115,29 +122,33 @@ class Neato(object):
             twist.linear.x = self.forward_speed
             twist.angular.z = self.angular_speed
             self.pub.publish(twist)
-            print self.state
-            print self.target_angle
-            print self.angle
-            print self.pos_x
-            print self.pos_y
+            print "State", self.state
+            print "Target Angle", self.target_angle
+            print "Angle", self.angle
+            print "X", self.pos_x
+            print "Y", self.pos_y
+            print "Puck Distance", self.puck_distance
+            print "Puck Offset", self.puck_offset
             print '\n'
 
         twist = Twist()
-        twist.linear.x = self.forward_speed
-        twist.angular.z = self.angular_speed
+        twist.linear.x = 0
+        twist.angular.z = 0
         self.pub.publish(twist)
-        print self.state
-        print self.target_angle
-        print self.angle
-        print self.pos_x
-        print self.pos_y
+        print "State", self.state
+        print "Target Angle", self.target_angle
+        print "Angle", self.angle
+        print "X", self.pos_x
+        print "Y", self.pos_y
+        print "Puck Distance", self.puck_distance
+        print "Puck Offset", self.puck_offset
         print '\n'
-        print 'done'
+        print 'Done'
 
 if __name__ == '__main__':
     #target_x = rospy.get_param('~target_x', 0)
     #target_y = rospy.get_param('~target_y', 0)
 
     neato = Neato()
-    neato.initialize_target(1,-2)
+    neato.initialize_target(1,-1)
     neato.run()
