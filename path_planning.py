@@ -21,20 +21,27 @@ class Neato(object):
         """
         rospy.init_node('path_planning')
         self.pub = rospy.Publisher('cmd_vel', Twist, queue_size=10)
+        # Subscribe to get position of the puck
         rospy.Subscriber('puck_camera_position', PuckPosition, self.update_puck)
+        # Subscribe to get position of the Neato using ceiling fiducials
         rospy.Subscriber('STAR_pose_continuous', PoseStamped, self.update_position)
+        # Game boundaries
         self.x_bounds = [-1, 3]
         self.y_bounds = [-4, 1]
+        # Angle limitation of Neato
         self.angle_bound = 26.75
+        # Position of Neato
         self.pos_x = 0
         self.pos_y = 0
         self.angle = 0
+        # Speed of Neato
         self.forward_speed = 0
         self.angular_speed = 0
         self.can_see_puck = False
         self.has_puck = False
         self.puck_distance = 200 # inches
         self.puck_offset = 0
+        self.puck_offset_sign = 1
         self.puck_distance_cutoff = 10 # inches
         self.puck_offset_cutoff = 0.1
         self.target_angle = 0
@@ -93,7 +100,11 @@ class Neato(object):
         else:
             self.can_see_puck = True
             self.puck_distance = msg.puck_distance
-            self.puck_offset = msg.puck_offset - 0.5
+            self.puck_offset = msg.puck_offset*2 - 1
+            if self.puck_offset > 0:
+                self.puck_offset_sign = -1
+            else:
+                self.puck_offset_sign = 1
             if self.puck_distance < self.puck_distance_cutoff:
                 self.has_puck = True
     def initialize_target(self, x, y):
@@ -111,7 +122,7 @@ class Neato(object):
                 self.state = 0
                 # turn around slowly to try to locate the puck
                 self.forward_speed = 0
-                self.angular_speed = 0.5
+                self.angular_speed = 0.5*self.puck_offset_sign
             elif not self.has_puck:
                 if abs(self.puck_offset) < self.puck_offset_cutoff:
                     # getting towards the puck
@@ -125,7 +136,7 @@ class Neato(object):
                     offset_speed = -self.puck_offset
                     if offset_speed > 1:
                         offset_speed = 1
-                    self.forward_speed = 1 - 2*abs(offset_speed)
+                    self.forward_speed = 1 - abs(offset_speed)
                     self.angular_speed = offset_speed
             else:
                 if abs(self.pos_x - self.target_x) < 0.1 and abs(self.pos_y - self.target_y) < 0.1:
@@ -141,7 +152,7 @@ class Neato(object):
                     # orienting towards the target with the puck
                     self.state = 3
                     # need to adjust this with some gain depending on scale (or for sign)
-                    angle_err = ((self.target_angle - self.angle)+180)%360 - 180
+                    angle_err = ((self.target_angle - self.angle)+180) % 360 - 180
                     offset_speed = (angle_err) / 50
                     if offset_speed > 1:
                         offset_speed = 1
@@ -183,5 +194,5 @@ if __name__ == '__main__':
     #target_y = rospy.get_param('~target_y', 0)
 
     neato = Neato()
-    neato.initialize_target(1,-1)
+    neato.initialize_target(1,-3)
     neato.run()
