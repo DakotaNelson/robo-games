@@ -17,6 +17,10 @@ class ColorTracker:
         #self.capture = cv.VideoCapture('red_puck.mp4')
         self.bridge = CvBridge()
 
+        lowpass_buffer_size = 5
+        self.offsetQueue = [0 for _ in range(lowpass_buffer_size)]
+        self.distanceQueue = [0 for _ in range(lowpass_buffer_size)]
+
     def process_frame(self, frame):
         # first, convert image from ROS to OpenCV
 
@@ -64,13 +68,13 @@ class ColorTracker:
             returnNow = True
 
         cv.imshow('frame', frame)
+        cv.circle(hsv, (cx,cy), 5, 255, -1)
 
         if returnNow:
             cv.waitKey(25)
             return
 
-        cv.circle(frame, (cx,cy), 5, 255, -1)
-
+        cv.circle(thresh2, (cx,cy), 5, 255, -1)
         cv.imshow('thresh', thresh2)
         if cv.waitKey(25) == 27:
             return
@@ -80,7 +84,11 @@ class ColorTracker:
         #print(width)
         #print(cx)
 
+        self.offsetQueue = self.offsetQueue[1:]
         offset = float(cx) / width
+        self.offsetQueue.append(offset)
+
+        offset = sum(self.offsetQueue) / 5.0
 
         def distance_fit(y):
             params = [4.18084598e+03, -1.20346945e+00]
@@ -88,7 +96,11 @@ class ColorTracker:
             d = params[1]
             return c+d
 
+        self.distanceQueue = self.distanceQueue[1:]
         dist = distance_fit(max_area)
+        self.distanceQueue.append(dist)
+
+        dist = sum(self.distanceQueue) / 5.0
 
         msg = PuckPosition(puck_offset=offset, puck_distance=dist)
         self.puck_pub.publish(msg)
