@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8" />
+
+<script type="text/javascript" src="http://cdn.robotwebtools.org/EventEmitter2/current/eventemitter2.min.js"></script>
+<script type="text/javascript" src="http://cdn.robotwebtools.org/roslibjs/current/roslib.min.js"></script>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.3/jquery.min.js"></script>
+<script src="http://code.jquery.com/jquery-1.11.3.min.js"></script>
+<link rel="stylesheet" href="http://code.jquery.com/ui/1.10.2/themes/smoothness/jquery-ui.css" />
+<script src="http://code.jquery.com/ui/1.10.2/jquery-ui.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/3.5.11/d3.js"></script>
+
+<style>
+.dot {
+  stroke: black;
+  fill: black;
+}
+</style>
+
+<script>
+$(document).ready(function(){
+
+  var margin = {"top": 20, "left": 20, "bottom": 20, "right": 20};
+
+  var width = window.innerWidth - margin.left - margin.right;
+  var height = window.innerHeight - margin.top - margin.bottom;
+
+  var svg = d3.select("body").append("svg")
+              .attr("width", width + margin.left + margin.right)
+              .attr("height", height + margin.top + margin.bottom)
+            .append("g")
+              .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+  var xScale = d3.scale.linear().range([0, width]).domain([-1, 3]);
+
+  var yScale = d3.scale.linear().range([height, 0]).domain([-1, 4]);
+
+  var color = d3.scale.category10();
+
+  function updateCanvas(data) {
+    // data should be an array of objects with format:
+    // [{"position":{"x":0, "y":0, "z":0}, "orientation":{"x":0, "y":0, "z":0, "w":0}}, ... ]
+
+    // assign an index to each element in the array
+    data.forEach(function(d, i) {
+      d.index = i;
+      return d;
+    });
+
+    var selection = svg.selectAll(".dot")
+                       .data(data, function(d) { return d.index });
+
+    selection.enter()
+             .append("circle")
+             .attr("class", "dot")
+             .attr("r", 10)
+             .style("fill", function(d) { return color(d.index) });
+
+    selection.attr("cx", function(d) { return xScale(d.position.x)} )
+             .attr("cy", function(d) { return yScale(d.position.y)} )
+  }
+
+  // TO REMOVE this makes the function globally accessible for easier debugging
+  window.updateCanvas = updateCanvas;
+
+  // connect to the rosbridge server
+  var ros = new ROSLIB.Ros({
+    url : 'ws://localhost:9090'
+  });
+
+  ros.on('connection', function() {
+    console.log('Connected to websocket server.');
+  });
+
+  ros.on('error', function(error) {
+    console.log('Error connecting to websocket server: ', error);
+  });
+
+  ros.on('close', function() {
+    console.log('Connection to websocket server closed.');
+  });
+
+  // Subscribe to the position of all the robots and puck
+  var fieldState = new ROSLIB.Topic({
+    ros: ros,
+    name: '/all_poses',
+    messageType : 'geometry_msgs/PoseArray'
+  });
+
+  fieldState.subscribe(function(message){
+    console.log('Got field state message.');
+    console.log(message);
+    updateCanvas(message.poses);
+  });
+});
+</script>
+
+</head>
+
+<body>
+</body>
+
+</html>
