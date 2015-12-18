@@ -44,6 +44,11 @@ $(document).ready(function(){
 
     // assign an index to each element in the array
     data.forEach(function(d, i) {
+      qx = d.orientation.x;
+      qy = d.orientation.y;
+      qz = d.orientation.z;
+      qw = d.orientation.w;
+      d.heading = Math.atan2(2*qy*qw - 2*qx*qz, 1 - 2*qy*qy - 2*qz*qz)
       d.index = i;
       return d;
     });
@@ -51,14 +56,22 @@ $(document).ready(function(){
     var selection = svg.selectAll(".dot")
                        .data(data, function(d) { return d.index });
 
-    selection.enter()
+    /*selection.enter()
              .append("circle")
              .attr("class", "dot")
              .attr("r", 10)
+             .style("fill", function(d) { return color(d.index) });*/
+
+    selection.enter()
+             .append("path")
+             .attr("class", "dot")
+             .attr("d", d3.svg.symbol().type("triangle-up").size(500))
              .style("fill", function(d) { return color(d.index) });
 
-    selection.attr("cx", function(d) { return xScale(d.position.x)} )
-             .attr("cy", function(d) { return yScale(d.position.y)} )
+    selection.attr("transform", function(d) { return "translate(" + xScale(d.position.x) + "," + yScale(d.position.y) + ") rotate(" + d.heading + ")"; });
+
+    /*selection.attr("cx", function(d) { return xScale(d.position.x)} )
+             .attr("cy", function(d) { return yScale(d.position.y)} );*/
   }
 
   // TO REMOVE this makes the function globally accessible for easier debugging
