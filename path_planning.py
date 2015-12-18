@@ -76,7 +76,7 @@ class Neato(object):
             raw_input()
             return False
         elif puck_y > self.y_bounds[1] or puck_y < self.y_bounds[0]:
-            print "Y", self.pos_x,
+            print "Y", self.pos_y
             print "Angle", self.angle
             print "Puck Distance", msg.puck_distance
             print "Puck Offset", msg.puck_offset
