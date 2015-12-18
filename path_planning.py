@@ -59,15 +59,17 @@ class Neato(object):
         """Uses the measured puck distance to determine whether or not
         the detected object is actually within the bounds of our coordinate
         frame. Returns True if so, returns False if outside the bounds"""
+        # Scale puck_distance from inches to meters
+        puck_distance = msg.puck_distance / 39.
         # Scale puck offset from 0 to 1 to being between -1 and 1
         puck_offset = msg.puck_offset*2 - 1
         # Calculating angle to puck based on msg.puck_offset
         puck_angle = puck_offset * self.angle_bound
         # Find location of measured "puck" using puck msg and Neato angle
-        puck_x = self.pos_x + math.cos(math.radians(self.angle-puck_angle))*msg.puck_distance
-        puck_y = self.pos_y + math.sin(math.radians(self.angle-puck_angle))*msg.puck_distance
+        puck_x = self.pos_x + math.cos(math.radians(self.angle-puck_angle))*puck_distance
+        puck_y = self.pos_y + math.sin(math.radians(self.angle-puck_angle))*puck_distance
         if puck_x > self.x_bounds[1] or puck_x < self.x_bounds[0]:
-            print "X", self.pos_x,
+            print "X", self.pos_x
             print "Angle", self.angle
             print "Puck Distance", msg.puck_distance
             print "Puck Offset", msg.puck_offset
@@ -86,7 +88,7 @@ class Neato(object):
             return False
         return True
     def update_puck(self, msg):
-        if msg.puck_distance == -1 or !self.is_valid_puck(msg):
+        if msg.puck_distance == -1 or not self.is_valid_puck(msg):
             self.can_see_puck = False
             self.has_puck = False
         else:
@@ -110,7 +112,7 @@ class Neato(object):
                 self.state = 0
                 # turn around slowly to try to locate the puck
                 self.forward_speed = 0
-                self.angular_speed = 0.25
+                self.angular_speed = 0.5
             elif not self.has_puck:
                 if abs(self.puck_offset) < self.puck_offset_cutoff:
                     # getting towards the puck

@@ -37,8 +37,8 @@ class ColorTracker:
 
         # erosion and dilation to remove small particles/noise
         kernel = np.ones((5,5), np.uint8)
-        thresh = cv.erode(thresh, kernel, iterations=3)
-        thresh = cv.dilate(thresh, kernel, iterations=3)
+        thresh = cv.erode(thresh, kernel, iterations=10)
+        thresh = cv.dilate(thresh, kernel, iterations=10)
 
         thresh2 = thresh.copy()
 
@@ -63,12 +63,15 @@ class ColorTracker:
             cx, cy = int(moments['m10']/moments['m00']), int(moments['m01']/moments['m00'])
         except ZeroDivisionError:
             print("can't divide by 0")
+            cx = 0
+            cy = 0
             msg = PuckPosition(puck_offset=-1, puck_distance=-1)
             self.puck_pub.publish(msg)
             returnNow = True
 
+        if not returnNow:
+            cv.circle(frame, (cx,cy), 5, 255, -1)
         cv.imshow('frame', frame)
-        cv.circle(hsv, (cx,cy), 5, 255, -1)
 
         if returnNow:
             cv.waitKey(25)
