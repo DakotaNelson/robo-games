@@ -23,7 +23,7 @@ class GrandCentralStation(object):
     def __init__(self):
         self.robot_names = []
         self.poses = PoseArray()
-        ignore_names = ['scan','stable_scan','tf','rosout_agg','rosout', 'clicked_point', 'move_base_simple', 'initialpose', 'all_poses'] 
+        ignore_names = ['scan','stable_scan','tf','rosout_agg','rosout', 'clicked_point', 'move_base_simple', 'initialpose', 'all_poses']
         ''' setup ROS stuff '''
         rospy.init_node('sky_node') ## initialize node
         #get ros namespaces
@@ -31,6 +31,7 @@ class GrandCentralStation(object):
         m = xmlrpclib.ServerProxy(os.environ['ROS_MASTER_URI'])
         code, msg, val = m.getPublishedTopics(caller_id, '')
 
+        print(val)
         for topic, topic_type in val:
             namespace = topic.split('/')[1]
             if namespace not in self.robot_names and namespace not in ignore_names\
@@ -43,7 +44,7 @@ class GrandCentralStation(object):
             rospy.Subscriber('/'+self.robots[-1].name+'/STAR_pose_continuous', PoseStamped, self.robots[-1].update_pose)
             #rospy.Subscriber(self.robots[-1].name+'/camera/imageraw')
         self.pub = rospy.Publisher('/all_poses', PoseArray, queue_size=10) # publish to 'chatter_count' topic
-        
+
 
     def go(self):
         """ main run loop """
@@ -65,6 +66,5 @@ class GrandCentralStation(object):
             r.sleep() ## wait until next time this code should run (according to rospy.Rate above)
 
 if __name__ == '__main__':
-    "run above code"
     ready_set = GrandCentralStation()
     ready_set.go()
