@@ -1,0 +1,7 @@
+install:
+sudo apt-get install ros-<rosdistro>-rosbridge-server
+
+run:
+roslaunch rosbridge_server rosbridge_websocket.launch
+
+Then visit game.html in your web browser.
