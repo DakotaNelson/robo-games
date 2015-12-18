@@ -1,0 +1,2 @@
+float64 puck_offset
+float64 puck_distance

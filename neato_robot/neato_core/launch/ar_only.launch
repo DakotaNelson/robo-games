@@ -1,50 +1,27 @@
 <launch>
 <arg name="namespace" default="/" /> <!-- choose base namespace for neato -->
-<arg name="correction" default="0.0" />
-<arg name="phase_offset" default="0.0" /> <!-- corrections for camera not pointing straight up 
+<arg name="correction" default="0.0" /> <!-- correction for camera not pointing straight up 
                                           (find with ar_locating calibrate_star_pose.py) -->
 <arg name="host"/> <!-- IP of main pi -->
-<arg name="host_up"/> <!-- IP of pi for upwards facing camera -->
 <arg name="receive_port" default="500"/> <!-- 1st 3 digits of port for cameras to use -->
 <arg name="use_sim_time" value="false"/> <!-- for rosbag -->
 <arg name="width" default="640"/> <!-- default is good -->
 <arg name="height" default="480"/> <!-- default is good -->
 <arg name="fps" default="30"/> <!-- default is good -->
 
-
-<!-- base robot namespace -->
-<group ns="$(arg namespace)">
-  <!-- start robot code -->
-  <include file="$(find neato_core)/launch/bringup_minimal.launch">
-	<arg name="host" value="$(arg host)"/>
-  <arg name="namespace" value="$(arg namespace)"/>
-  </include>
-  <!-- start forward camera code -->
-  <include file="$(find gscam)/examples/raspi_nodelet_udp.launch">
-	 <arg name="host" value="$(arg host)"/>
-   <arg name="receive_port" value="$(arg receive_port)1"/>
-   <arg name="width" value="$(arg width)"/>
-   <arg name="height" value="$(arg height)"/>
-   <arg name="fps" value="$(arg fps)"/>
-  </include>
-</group>
-
-
 <!-- upwards camera code -->
 <group ns="$(arg namespace)_ar">
   <!-- get camera image code -->
   <include file="$(find gscam)/examples/raspi_nodelet_udp.launch">
-   <arg name="host" value="$(arg host_up)"/>
-   <arg name="receive_port" value="$(arg receive_port)2"/>
+   <arg name="host" value="$(arg host)"/>
+   <arg name="receive_port" value="$(arg receive_port)3"/>
    <arg name="width" value="$(arg width)"/>
    <arg name="height" value="$(arg height)"/>
    <arg name="fps" value="$(arg fps)"/>
   </include>
   <!-- start star_center_position.py (converts from AR pose in image to robot pose relative to room) -->
-  <node name="star_center_positioning_node" pkg="ar_locating" type="star_center_position_revised.py" respawn="false" output="screen">
+  <node name="position" pkg="ar_locating" type="star_center_position_puck.py" respawn="false" output="screen">
     <param name="pose_correction" type="double" value="$(arg correction)"/>
-    <param name="phase_offset" type="double" value="$(arg phase_offset)"/>
-    <param name="is_flipped" type="bool" value="True"/>
   </node>
 </group>
 <!-- start ar_pose to find AR markers relative to the camera -->
