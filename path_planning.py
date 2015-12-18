@@ -136,7 +136,7 @@ class Neato(object):
                 self.state = 0
                 # turn around slowly to try to locate the puck
                 self.forward_speed = 0
-                self.angular_speed = 0.5*self.puck_offset_sign
+                self.angular_speed = 0.25*self.puck_offset_sign
             elif not self.has_puck:
                 if abs(self.puck_offset) < self.puck_offset_cutoff:
                     # getting towards the puck

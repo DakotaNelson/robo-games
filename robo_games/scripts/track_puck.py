@@ -17,13 +17,18 @@ class ColorTracker:
         #self.capture = cv.VideoCapture('red_puck.mp4')
         self.bridge = CvBridge()
 
+        self.count = 0
+        self.max_count = 4
         lowpass_buffer_size = 5
         self.offsetQueue = [0 for _ in range(lowpass_buffer_size)]
         self.distanceQueue = [0 for _ in range(lowpass_buffer_size)]
 
     def process_frame(self, frame):
+        # only send over every 4th frame
+        self.count += 1
+        if not self.count % self.max_count == 0:
+            return
         # first, convert image from ROS to OpenCV
-
         try:
             frame = self.bridge.imgmsg_to_cv2(frame, "bgr8")
         except CvBridgeError, e:
@@ -33,7 +38,7 @@ class ColorTracker:
         # consider blurring image a bit
 
         #hsv = cv.cvtColor(frame, cv.COLOR_BGR2HSV)
-        thresh = cv.inRange(frame, np.array((0, 0, 100)), np.array((100, 100, 255)))
+        thresh = cv.inRange(frame, np.array((0, 0, 130)), np.array((130, 130, 255)))
 
         # erosion and dilation to remove small particles/noise
         kernel = np.ones((5,5), np.uint8)

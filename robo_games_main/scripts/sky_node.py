@@ -31,7 +31,7 @@ class GrandCentralStation(object):
         m = xmlrpclib.ServerProxy(os.environ['ROS_MASTER_URI'])
         code, msg, val = m.getPublishedTopics(caller_id, '')
 
-        print(val)
+        #print(val)
         for topic, topic_type in val:
             namespace = topic.split('/')[1]
             if namespace not in self.robot_names and namespace not in ignore_names\
@@ -51,6 +51,7 @@ class GrandCentralStation(object):
         r = rospy.Rate(2) ## sets rate for the program to run (Hz)
         pose_list = []
         while not rospy.is_shutdown(): #instead of while true, otherwice crtl+C doesn't work
+            pose_list = []
             for robot in self.robots:
                 #print robot.name + '\n'
                 #print robot.pose
