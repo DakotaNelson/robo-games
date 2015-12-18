@@ -20,7 +20,7 @@
    <arg name="fps" value="$(arg fps)"/>
   </include>
   <!-- start star_center_position.py (converts from AR pose in image to robot pose relative to room) -->
-  <node name="position" pkg="ar_locating" type="star_center_position.py" respawn="false" output="screen">
+  <node name="position" pkg="ar_locating" type="star_center_position_puck.py" respawn="false" output="screen">
     <param name="pose_correction" type="double" value="$(arg correction)"/>
   </node>
 </group>
