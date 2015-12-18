@@ -9,7 +9,6 @@ import math
 from geometry_msgs.msg import Twist, PoseStamped
 from tf.transformations import euler_from_quaternion
 from robo_games.msg import PuckCameraLocation as PuckPosition
-# need import for blob detection
 
 class Neato(object):
     def __init__(self):
@@ -24,6 +23,9 @@ class Neato(object):
         self.pub = rospy.Publisher('cmd_vel', Twist, queue_size=10)
         rospy.Subscriber('puck_camera_position', PuckPosition, self.update_puck)
         rospy.Subscriber('STAR_pose_continuous', PoseStamped, self.update_position)
+        self.x_bounds = [-1, 3]
+        self.y_bounds = [-4, 1]
+        self.angle_bound = 26.75
         self.pos_x = 0
         self.pos_y = 0
         self.angle = 0
@@ -53,8 +55,38 @@ class Neato(object):
             # compute angle to target (geometry needs to be double checked)
             target_radians = math.atan2(self.target_y - self.pos_y, self.target_x - self.pos_x)
             self.target_angle = target_radians*180 / math.pi
+    def is_valid_puck(self, msg):
+        """Uses the measured puck distance to determine whether or not
+        the detected object is actually within the bounds of our coordinate
+        frame. Returns True if so, returns False if outside the bounds"""
+        # Scale puck offset from 0 to 1 to being between -1 and 1
+        puck_offset = msg.puck_offset*2 - 1
+        # Calculating angle to puck based on msg.puck_offset
+        puck_angle = puck_offset * self.angle_bound
+        # Find location of measured "puck" using puck msg and Neato angle
+        puck_x = self.pos_x + math.cos(math.radians(self.angle-puck_angle))*msg.puck_distance
+        puck_y = self.pos_y + math.sin(math.radians(self.angle-puck_angle))*msg.puck_distance
+        if puck_x > self.x_bounds[1] or puck_x < self.x_bounds[0]:
+            print "X", self.pos_x,
+            print "Angle", self.angle
+            print "Puck Distance", msg.puck_distance
+            print "Puck Offset", msg.puck_offset
+            print "Calculated Puck X", puck_x
+            print "Puck too far away in x axis"
+            raw_input()
+            return False
+        elif puck_y > self.y_bounds[1] or puck_y < self.y_bounds[0]:
+            print "Y", self.pos_x,
+            print "Angle", self.angle
+            print "Puck Distance", msg.puck_distance
+            print "Puck Offset", msg.puck_offset
+            print "Calculated Puck Y", puck_y
+            print "Puck too far away in y axis"
+            raw_input()
+            return False
+        return True
     def update_puck(self, msg):
-        if msg.puck_distance == -1:
+        if msg.puck_distance == -1 or !self.is_valid_puck(msg):
             self.can_see_puck = False
             self.has_puck = False
         else:
