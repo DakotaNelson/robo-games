@@ -16,6 +16,8 @@ class ColorTracker:
         self.puck_pub = rospy.Publisher("/puck_camera_position", PuckPosition, queue_size=1)
         #self.capture = cv.VideoCapture('red_puck.mp4')
         self.bridge = CvBridge()
+        self.offsetQueue = [0 for _ in range(5)]
+        self.distanceQueue = [0 for _ in range(5)]
 
     def process_frame(self, frame):
         # first, convert image from ROS to OpenCV
@@ -63,14 +65,14 @@ class ColorTracker:
             self.puck_pub.publish(msg)
             returnNow = True
 
+        cv.circle(hsv, (cx,cy), 5, 255, -1)
         cv.imshow('frame', hsv)
 
         if returnNow:
             cv.waitKey(25)
             return
 
-        cv.circle(frame, (cx,cy), 5, 255, -1)
-
+        cv.circle(thresh2, (cx,cy), 5, 255, -1)
         cv.imshow('thresh', thresh2)
         if cv.waitKey(25) == 27:
             return
@@ -80,7 +82,11 @@ class ColorTracker:
         #print(width)
         #print(cx)
 
+        self.offsetQueue = self.offsetQueue[1:]
         offset = float(cx) / width
+        self.offsetQueue.append(offset)
+
+        offset = sum(self.offsetQueue) / 5.0
 
         def distance_fit(y):
             params = [2419.17668297, 31.91655963]
@@ -88,7 +94,11 @@ class ColorTracker:
             d = params[1]
             return c+d
 
+        self.distanceQueue = self.distanceQueue[1:]
         dist = distance_fit(max_area)
+        self.distanceQueue.append(dist)
+
+        dist = sum(self.distanceQueue) / 5.0
 
         msg = PuckPosition(puck_offset=offset, puck_distance=dist)
         self.puck_pub.publish(msg)
