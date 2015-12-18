@@ -37,8 +37,8 @@ class ColorTracker:
 
         # erosion and dilation to remove small particles/noise
         kernel = np.ones((5,5), np.uint8)
-        thresh = cv.erode(thresh, kernel, iterations=10)
-        thresh = cv.dilate(thresh, kernel, iterations=10)
+        thresh = cv.erode(thresh, kernel, iterations=8)
+        thresh = cv.dilate(thresh, kernel, iterations=8)
 
         thresh2 = thresh.copy()
 

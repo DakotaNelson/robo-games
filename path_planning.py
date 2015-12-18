@@ -4,6 +4,7 @@ to run inside a robot specific namespace for STAR_pose_continuous to work"""
 import sys
 import rospy
 import cv2
+import doctest
 import numpy as np
 import math
 from geometry_msgs.msg import Twist, PoseStamped
@@ -62,10 +63,21 @@ class Neato(object):
             # compute angle to target (geometry needs to be double checked)
             target_radians = math.atan2(self.target_y - self.pos_y, self.target_x - self.pos_x)
             self.target_angle = target_radians*180 / math.pi
-    def is_valid_puck(self, msg):
+    def is_valid_puck(self, msg, print_flag = True):
         """Uses the measured puck distance to determine whether or not
         the detected object is actually within the bounds of our coordinate
-        frame. Returns True if so, returns False if outside the bounds"""
+        frame. Returns True if so, returns False if outside the bounds
+
+        >>> obj = Neato()
+        >>> msg = PuckPosition()
+        >>> msg.puck_distance = 156
+        >>> msg.puck_offset = 0.5
+        >>> obj.is_valid_puck(msg, print_flag=False)
+        False
+        >>> msg.puck_distance = 78
+        >>> obj.is_valid_puck(msg, print_flag=False)
+        True
+        """
         # Scale distance to be in meters
         puck_distance = msg.puck_distance / 39.
         # Scale puck offset from 0 to 1 to being between -1 and 1
@@ -76,20 +88,22 @@ class Neato(object):
         puck_x = self.pos_x + math.cos(math.radians(self.angle-puck_angle))*puck_distance
         puck_y = self.pos_y + math.sin(math.radians(self.angle-puck_angle))*puck_distance
         if puck_x > self.x_bounds[1] or puck_x < self.x_bounds[0]:
-            print "X", self.pos_x
-            print "Angle", self.angle
-            print "Puck Distance", msg.puck_distance
-            print "Puck Offset", msg.puck_offset
-            print "Calculated Puck X", puck_x
-            print "Puck too far away in x axis"
+            if print_flag:
+                print "X", self.pos_x
+                print "Angle", self.angle
+                print "Puck Distance", msg.puck_distance
+                print "Puck Offset", msg.puck_offset
+                print "Calculated Puck X", puck_x
+                print "Puck too far away in x axis"
             return False
         elif puck_y > self.y_bounds[1] or puck_y < self.y_bounds[0]:
-            print "Y", self.pos_y
-            print "Angle", self.angle
-            print "Puck Distance", msg.puck_distance
-            print "Puck Offset", msg.puck_offset
-            print "Calculated Puck Y", puck_y
-            print "Puck too far away in y axis"
+            if print_flag:
+                print "Y", self.pos_y
+                print "Angle", self.angle
+                print "Puck Distance", msg.puck_distance
+                print "Puck Offset", msg.puck_offset
+                print "Calculated Puck Y", puck_y
+                print "Puck too far away in y axis"
             return False
         return True
     def update_puck(self, msg):
@@ -110,7 +124,7 @@ class Neato(object):
     def initialize_target(self, x, y):
         self.target_x = x
         self.target_y = y       
-    def run(self):
+    def run(self, print_flag=True):
         r = rospy.Rate(5)
 
         while not rospy.is_shutdown():
@@ -166,6 +180,21 @@ class Neato(object):
             twist.linear.x = self.forward_speed
             twist.angular.z = self.angular_speed
             self.pub.publish(twist)
+            if print_flag:
+                print "State", self.state
+                print "Target Angle", self.target_angle
+                print "Angle", self.angle
+                print "X", self.pos_x
+                print "Y", self.pos_y
+                print "Puck Distance", self.puck_distance
+                print "Puck Offset", self.puck_offset
+                print '\n'
+
+        twist = Twist()
+        twist.linear.x = 0
+        twist.angular.z = 0
+        self.pub.publish(twist)
+        if print_flag:
             print "State", self.state
             print "Target Angle", self.target_angle
             print "Angle", self.angle
@@ -174,25 +203,13 @@ class Neato(object):
             print "Puck Distance", self.puck_distance
             print "Puck Offset", self.puck_offset
             print '\n'
-
-        twist = Twist()
-        twist.linear.x = 0
-        twist.angular.z = 0
-        self.pub.publish(twist)
-        print "State", self.state
-        print "Target Angle", self.target_angle
-        print "Angle", self.angle
-        print "X", self.pos_x
-        print "Y", self.pos_y
-        print "Puck Distance", self.puck_distance
-        print "Puck Offset", self.puck_offset
-        print '\n'
-        print 'Done'
+            print 'Done'
 
 if __name__ == '__main__':
     #target_x = rospy.get_param('~target_x', 0)
     #target_y = rospy.get_param('~target_y', 0)
 
+    doctest.testmod()
     neato = Neato()
     neato.initialize_target(1,-3)
-    neato.run()
+    neato.run(False)
