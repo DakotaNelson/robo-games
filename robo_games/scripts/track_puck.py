@@ -16,8 +16,10 @@ class ColorTracker:
         self.puck_pub = rospy.Publisher("/puck_camera_position", PuckPosition, queue_size=1)
         #self.capture = cv.VideoCapture('red_puck.mp4')
         self.bridge = CvBridge()
-        self.offsetQueue = [0 for _ in range(5)]
-        self.distanceQueue = [0 for _ in range(5)]
+
+        lowpass_buffer_size = 5
+        self.offsetQueue = [0 for _ in range(lowpass_buffer_size)]
+        self.distanceQueue = [0 for _ in range(lowpass_buffer_size)]
 
     def process_frame(self, frame):
         # first, convert image from ROS to OpenCV
