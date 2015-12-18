@@ -48,6 +48,15 @@ class Neato(object):
         self.target_angle = 0
         self.target_angle_cutoff = 2
         self.state = 0
+    def update_enemy(self, enemy_namespace):
+        if enemy_namespace:
+            # set multiplayer mode to on
+            self.multiplayer = True
+            # Subscribe to enemy Neato using their namespace
+            enemy_topic = enemy_namespace + '/STAR_pose_continuous'
+            rospy.Subscriber(enemy_topic, PoseStamped, self.update_enemy_position)
+        else:
+            self.multiplayer = False
     @staticmethod
     def convert_pose_to_xy_and_theta(pose):
         """ Convert pose (geometry_msgs.Pose) to a (x,y,yaw) tuple """
@@ -63,6 +72,9 @@ class Neato(object):
             # compute angle to target (geometry needs to be double checked)
             target_radians = math.atan2(self.target_y - self.pos_y, self.target_x - self.pos_x)
             self.target_angle = target_radians*180 / math.pi
+    def udpate_enemy_position(self, msg):
+        self.enemy_pos_x = msg.pose.x
+        self.enemy_pos_y = msg.pose.y
     def is_valid_puck(self, msg, print_flag = True):
         """Uses the measured puck distance to determine whether or not
         the detected object is actually within the bounds of our coordinate
@@ -206,10 +218,12 @@ class Neato(object):
             print 'Done'
 
 if __name__ == '__main__':
-    #target_x = rospy.get_param('~target_x', 0)
-    #target_y = rospy.get_param('~target_y', 0)
+    target_x = rospy.get_param('~target_x', 1)
+    target_y = rospy.get_param('~target_y', -3)
+    enemy_namespace = rospy.get_param('~enemy_namespace', False)
 
     doctest.testmod()
     neato = Neato()
-    neato.initialize_target(1,-3)
+    neato.update_enemy(enemy_namespace)
+    neato.initialize_target(target_x, target_y)
     neato.run(False)
