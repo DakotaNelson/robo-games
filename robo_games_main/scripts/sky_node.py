@@ -5,22 +5,25 @@ import time
 import os
 import xmlrpclib
 from std_msgs.msg import String
-from geometry_msgs.msg import PoseStamped, Pose, Point, Quaternion
+from geometry_msgs.msg import PoseStamped, Pose, Point, Quaternion, PoseArray
 
 class Robot(object):
     def __init__(self, name):
         self.name = name
         self.pose = Pose
+        self.has_pose = False
 
     def update_pose(self, msg):
-        print "got pose " + self.name
+        #print "got pose " + self.name
+        self.has_pose = True
         self.pose = msg.pose
 
 class GrandCentralStation(object):
     """ This class encompasses the entire node """
     def __init__(self):
         self.robot_names = []
-        ignore_names = ['scan','stable_scan','tf','rosout_agg','rosout'] 
+        self.poses = PoseArray()
+        ignore_names = ['scan','stable_scan','tf','rosout_agg','rosout', 'clicked_point', 'move_base_simple', 'initialpose', 'all_poses'] 
         ''' setup ROS stuff '''
         rospy.init_node('sky_node') ## initialize node
         #get ros namespaces
@@ -37,18 +40,27 @@ class GrandCentralStation(object):
         self.robots = []
         for name in self.robot_names:
             self.robots.append(Robot(name))
-            rospy.Subscriber(self.robots[-1].name+'/STAR_pose_continuous', PoseStamped, self.robots[-1].update_pose)
+            rospy.Subscriber('/'+self.robots[-1].name+'/STAR_pose_continuous', PoseStamped, self.robots[-1].update_pose)
             #rospy.Subscriber(self.robots[-1].name+'/camera/imageraw')
-        self.pub = rospy.Publisher('all_poses', String, queue_size=10) # publish to 'chatter_count' topic
+        self.pub = rospy.Publisher('/all_poses', PoseArray, queue_size=10) # publish to 'chatter_count' topic
         
-
 
     def go(self):
         """ main run loop """
         r = rospy.Rate(2) ## sets rate for the program to run (Hz)
+        pose_list = []
         while not rospy.is_shutdown(): #instead of while true, otherwice crtl+C doesn't work
             for robot in self.robots:
-                self.pub.publish(robot.name) #publish message to 'chatter_count' topic
+                #print robot.name + '\n'
+                #print robot.pose
+                if robot.has_pose:
+                    if robot.name == 'puck':
+                        pose_list.insert(0, robot.pose)
+                    else:
+                        pose_list.append(robot.pose)
+            if len(pose_list) > 0:
+                self.poses.poses = pose_list
+                self.pub.publish(self.poses) #publish message to 'chatter_count' topic
 
             r.sleep() ## wait until next time this code should run (according to rospy.Rate above)
 
