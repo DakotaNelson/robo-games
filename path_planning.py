@@ -74,6 +74,9 @@ class Neato(object):
         >>> msg.puck_offset = 0.5
         >>> obj.is_valid_puck(msg, print_flag=False)
         False
+        >>> msg.puck_distance = 78
+        >>> obj.is_valid_puck(msg, print_flag=False)
+        True
         """
         # Scale distance to be in meters
         puck_distance = msg.puck_distance / 39.
