@@ -54,7 +54,19 @@ class Neato(object):
         orientation_tuple = (pose.orientation.x, pose.orientation.y, pose.orientation.z, pose.orientation.w)
         angles = euler_from_quaternion(orientation_tuple)
         return pose.position.x, pose.position.y, angles[2]
-    def update_position(self, msg):
+    def update_position(self, msg, print_flag = False):
+        """Callback function to update position and target angle of Neato based
+        on information from ceiling fiducials
+
+        >>> obj = Neato()
+        >>> obj.initialize_target(2,2)
+        >>> obj.has_puck = True
+        >>> msg = PoseStamped()
+        >>> msg.pose.position.x = 1
+        >>> msg.pose.position.y = 1
+        >>> obj.update_position(msg, True)
+        45.0
+        """
         x, y, theta = self.convert_pose_to_xy_and_theta(msg.pose)
         self.pos_x = x
         self.pos_y = y
@@ -63,6 +75,8 @@ class Neato(object):
             # compute angle to target (geometry needs to be double checked)
             target_radians = math.atan2(self.target_y - self.pos_y, self.target_x - self.pos_x)
             self.target_angle = target_radians*180 / math.pi
+        if print_flag:
+            print self.target_angle
     def is_valid_puck(self, msg, print_flag = True):
         """Uses the measured puck distance to determine whether or not
         the detected object is actually within the bounds of our coordinate
